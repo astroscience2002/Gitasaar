@@ -297,11 +297,18 @@ public final class MainActivity extends Activity {
         LinearLayout hero=stack();topPad(hero,20,23,20,22);hero.setBackground(gradient(23));
         TextView prefix=text("॥ श्रीमद्भगवद्गीता ॥",16,INK,true);hero.addView(prefix);
         hero.addView(text("हर दिन गीता से\nएक नई सीख",29,INK,true),gap(12));
-        hero.addView(text("18 अध्याय • 700 श्लोक • सरल हिंदी अर्थ",13,INK,false),gap(8));
+        hero.addView(text("18 अध्याय • 700 श्लोक • हिंदी और English",13,INK,false),gap(8));
+        hero.addView(new KrishnaArtView(this),new LinearLayout.LayoutParams(-1,dp(135)));
         TextView explore=button("गीता पढ़ना शुरू करें  →",true);
         LinearLayout.LayoutParams px=gap(18);hero.addView(explore,px);
         explore.setOnClickListener(v->{current=Screen.CHAPTERS;render();});
         body.addView(hero);
+        LinearLayout guide=card();
+        guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true));
+        guide.addView(text("चिंता, रिश्ते, करियर, गुस्सा या कोई और परेशानी। गीता के संबंधित श्लोकों से मार्गदर्शन पाएँ।",15,INK,false),gap(10));
+        TextView go=button("गीता से मार्गदर्शन पाएँ  →",true);guide.addView(go,gap(14));
+        go.setOnClickListener(v->startActivity(new Intent(this,GuidanceActivity.class)));
+        body.addView(guide,gap(15));
         GitaVerse today=QuoteScheduler.todayVerse(repository.getAll());
         if(today!=null){
             LinearLayout quote=card();
@@ -374,7 +381,7 @@ public final class MainActivity extends Activity {
         s.addView(text(selectedVerse.sanskrit,22,INK,true),gap(23));
         View hr=new View(this);hr.setBackgroundColor(BORDER);
         s.addView(hr,gap(20));s.addView(text("आसान हिंदी अर्थ",16,SAFFRON,true),gap(20));
-        s.addView(text(selectedVerse.hindi,17,INK,false),gap(11));
+        s.addView(text("en".equals(prefs.getString("app_language","hi"))?selectedVerse.meaning(true):selectedVerse.meaning(false),17,INK,false),gap(11));
         s.addView(verseActions(selectedVerse),gap(27));body.addView(s,gap(8));
         TextView chapter=button("अध्याय "+selectedVerse.chapter+" के बाकी श्लोक",false);
         body.addView(chapter,gap(15));
@@ -455,6 +462,15 @@ public final class MainActivity extends Activity {
         }
     }
     private void showSettings(){
+        LinearLayout languages=card();
+        languages.addView(text("🌐  भाषा / Language",19,INK,true));
+        languages.addView(text("Sanskrit shlok with Hindi or English translation",13,MUTED,false),gap(7));
+        TextView hindi=button("हिंदी अर्थ",!"en".equals(prefs.getString("app_language","hi")));
+        TextView english=button("English Meaning","en".equals(prefs.getString("app_language","hi")));
+        languages.addView(hindi,gap(10));languages.addView(english,gap(9));
+        hindi.setOnClickListener(v->{prefs.edit().putString("app_language","hi").apply();render();});
+        english.setOnClickListener(v->{prefs.edit().putString("app_language","en").apply();render();});
+        body.addView(languages);
         LinearLayout notif=card();
         notif.addView(text("🔔  रोज़ का गीता संदेश",19,INK,true));
         notif.addView(text("हर सुबह लगभग 8 बजे श्लोक और उसका हिंदी अर्थ नोटिफिकेशन में पाएँ। समय फोन की बैटरी सेटिंग पर निर्भर है।",14,MUTED,false),gap(9));
