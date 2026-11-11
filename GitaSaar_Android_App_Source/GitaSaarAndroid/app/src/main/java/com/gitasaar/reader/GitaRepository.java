@@ -22,7 +22,9 @@ public final class GitaRepository {
         {"https://cdn.jsdelivr.net/gh/AdiyogiArts/gita-json@main/base.json",
          "https://raw.githubusercontent.com/AdiyogiArts/gita-json/main/base.json"},
         {"https://cdn.jsdelivr.net/gh/AdiyogiArts/gita-json@main/hi.json",
-         "https://raw.githubusercontent.com/AdiyogiArts/gita-json/main/hi.json"}
+         "https://raw.githubusercontent.com/AdiyogiArts/gita-json/main/hi.json"},
+        {"https://cdn.jsdelivr.net/gh/AdiyogiArts/gita-json@main/en.json",
+         "https://raw.githubusercontent.com/AdiyogiArts/gita-json/main/en.json"}
     };
     private final Context context;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -47,16 +49,19 @@ public final class GitaRepository {
             try {
                 JSONObject base = new JSONObject(readOrDownload("gita_base.json", DATA_URLS[0]));
                 JSONObject hindi = new JSONObject(readOrDownload("gita_hi.json", DATA_URLS[1]));
+                JSONObject english = new JSONObject(readOrDownload("gita_en.json", DATA_URLS[2]));
                 TreeMap<String, RawVerse> entries = new TreeMap<>();
-                harvest(base, entries, false);
-                harvest(hindi, entries, true);
+                harvest(base, entries, "base");
+                harvest(hindi, entries, "hi");
+                harvest(english, entries, "en");
                 ArrayList<GitaVerse> all = new ArrayList<>();
                 for (RawVerse item : entries.values()) {
                     if (item.chapter < 1 || item.chapter > 18 || item.verse < 1 || item.sanskrit.isEmpty()) continue;
                     String meaning = item.hindi.isEmpty() ? "इस श्लोक का हिंदी अर्थ फिलहाल उपलब्ध नहीं है।" : item.hindi;
                     all.add(new GitaVerse(item.chapter, item.verse,
                         item.chapterName.isEmpty() ? "अध्याय " + item.chapter : item.chapterName,
-                        item.sanskrit, meaning));
+                        item.sanskrit, meaning,
+                        item.english.isEmpty() ? "English translation not available." : item.english));
                 }
                 all.sort(Comparator.comparingInt((GitaVerse v) -> v.chapter).thenComparingInt(v -> v.number));
                 if (all.size() < 690 || all.size() > 710) throw new IOException("Dataset में " + all.size() + " श्लोक मिले, 700 होने चाहिए।");
@@ -75,11 +80,11 @@ public final class GitaRepository {
 
     private static final class RawVerse {
         int chapter, verse;
-        String chapterName="", sanskrit="", hindi="";
+        String chapterName="", sanskrit="", hindi="", english="";
     }
 
     /** Handles both flat {"1-1":{...}} and nested {"chapters":[{"verses":[...] }]} formats. */
-    private static void harvest(JSONObject root, Map<String, RawVerse> entries, boolean isHindi) {
+    private static void harvest(JSONObject root, Map<String, RawVerse> entries, String language) {
         JSONArray chapters = root.optJSONArray("chapters");
         if (chapters != null) {
             for (int i = 0; i < chapters.length(); i++) {
@@ -89,12 +94,12 @@ public final class GitaRepository {
                 String name = firstString(chapter,"name_sanskrit","chapterName","name");
                 JSONArray rows = chapter.optJSONArray("verses");
                 if (rows == null) continue;
-                for (int j=0;j<rows.length();j++) add(entries, rows.optJSONObject(j), number, j+1, name, isHindi);
+                for (int j=0;j<rows.length();j++) add(entries, rows.optJSONObject(j), number, j+1, name, language);
             }
         }
         JSONArray verses = root.optJSONArray("verses");
         if (verses != null) {
-            for (int i=0;i<verses.length();i++) add(entries, verses.optJSONObject(i), 0, 0, "", isHindi);
+            for (int i=0;i<verses.length();i++) add(entries, verses.optJSONObject(i), 0, 0, "", language);
         }
         Iterator<String> keys = root.keys();
         while (keys.hasNext()) {
@@ -104,8 +109,8 @@ public final class GitaRepository {
             try {
                 int ch = Integer.parseInt(p[0]), v = Integer.parseInt(p[1]);
                 Object element = root.opt(key);
-                if (element instanceof JSONObject) add(entries, (JSONObject) element, ch, v, "", isHindi);
-                else if (element instanceof String && isHindi) {
+                if (element instanceof JSONObject) add(entries, (JSONObject) element, ch, v, "", language);
+                else if (element instanceof String && "hi".equals(language)) {
                     RawVerse raw = entries.computeIfAbsent(ch+"-"+v,k->new RawVerse());
                     raw.chapter=ch; raw.verse=v; raw.hindi=(String)element;
                 }
@@ -114,7 +119,7 @@ public final class GitaRepository {
     }
 
     private static void add(Map<String,RawVerse> all, JSONObject obj, int chapter, int verse,
-                            String chapterName, boolean isHindi) {
+                            String chapterName, String language) {
         if (obj == null) return;
         int ch=firstInt(obj,"chapter_number","chapter","chapterNumber","chapter_id");
         int no=firstInt(obj,"verse_number","verse","verseNumber","number");
@@ -126,8 +131,11 @@ public final class GitaRepository {
         item.chapter=chapter; item.verse=verse;
         if (!chapterName.isEmpty()) item.chapterName=chapterName;
         String sanskrit=firstString(obj,"sanskrit","slok","shloka","text","devanagari");
-        if (!sanskrit.isEmpty() && (item.sanskrit.isEmpty() || !isHindi)) item.sanskrit=sanskrit;
-        if (isHindi) {
+        if (!sanskrit.isEmpty() && (item.sanskrit.isEmpty() || "base".equals(language))) item.sanskrit=sanskrit;
+        if ("en".equals(language)) {
+            String meaning=firstString(obj,"english","translation","translation_english","meaning","text");
+            if (!meaning.isEmpty()) item.english=meaning;
+        } else if ("hi".equals(language)) {
             String meaning=firstString(obj,"hindi","translation_hindi","meaning_hindi","bhavarth");
             if (meaning.isEmpty()) meaning=translate(obj.opt("translations"));
             if (meaning.isEmpty()) meaning=translate(obj.opt("translation"));
