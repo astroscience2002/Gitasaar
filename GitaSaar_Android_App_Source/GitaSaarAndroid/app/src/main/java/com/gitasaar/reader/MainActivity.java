@@ -155,7 +155,7 @@ public final class MainActivity extends Activity {
             hasConnectivity=true;
             render();
             if(repository.getAll().isEmpty()&&!loading)loadGita();
-            if(!adsStarted)initializeAds();
+            if(BuildConfig.ADS_ENABLED && !adsStarted)initializeAds();
         }
     }
     private void loadGita(){
@@ -617,7 +617,7 @@ public final class MainActivity extends Activity {
         MobileAds.initialize(this,status->{});
         banner=new AdView(this);
         banner.setAdSize(AdSize.BANNER);
-        banner.setAdUnitId(TEST_BANNER);
+        banner.setAdUnitId(BuildConfig.BANNER_AD_UNIT_ID);
         banner.loadAd(new AdRequest.Builder().build());
         if(isOnline())render();
     }
