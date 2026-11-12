@@ -43,22 +43,47 @@ public final class KrishnaVisual extends View {
         if(backup!=null)CACHE.put(name,backup);
         return backup;
     }
+    // Focal points are tuned to the actual 22 Krishna artworks. These keep the
+    // faces inside wide banner crops while avoiding side bars or blurred copies.
+    private static final float[] Y_FOCUS={
+        0f, .30f,.27f,.35f,.28f,.30f,.34f,.27f,.31f,.35f,
+        .31f,.47f,.30f,.39f,.35f,.42f,.34f,.30f,.49f,
+        .42f,.29f,.30f
+    };
+    private float focusY(){
+        if(panel==0)return .49f; // Kurukshetra home banner
+        return panel>0 && panel<Y_FOCUS.length ? Y_FOCUS[panel]:.40f;
+    }
+    private float focusX(){
+        if(panel==17)return .36f; // Krishna reading on left of scene
+        if(panel==18)return .62f; // Krishna teaching at right of scene
+        if(panel==3)return .56f;  // include Krishna and Arjuna
+        if(panel==19)return .54f; // guidance two-person scene
+        return .50f;
+    }
+    private int clamp(int v,int min,int max){return Math.max(min,Math.min(v,max));}
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
         Bitmap bitmap=getBitmap();if(bitmap==null||getWidth()==0||getHeight()==0)return;
-        float w=getWidth(),h=getHeight();
-        float scale=Math.min(w/bitmap.getWidth(),h/bitmap.getHeight());
-        float iw=bitmap.getWidth()*scale,ih=bitmap.getHeight()*scale;
-        float x=(w-iw)/2f,y=(h-ih)/2f;
-        RectF frame=new RectF(0,0,w,h);
+        float viewW=getWidth(),viewH=getHeight();
+        int width=bitmap.getWidth(),height=bitmap.getHeight();
+        float targetAspect=viewW/viewH,originalAspect=(float)width/height;
+        android.graphics.Rect source;
+        if(originalAspect>targetAspect){
+            // Wide image in tall card: crop only left/right, keeping the focal point.
+            int croppedW=Math.min(width,Math.max(1,Math.round(height*targetAspect)));
+            int left=clamp(Math.round(width*focusX()-croppedW/2f),0,width-croppedW);
+            source=new android.graphics.Rect(left,0,left+croppedW,height);
+        }else{
+            // Portrait image in wide card: crop only top/bottom, aimed at Krishna's face.
+            int croppedH=Math.min(height,Math.max(1,Math.round(width/targetAspect)));
+            int top=clamp(Math.round(height*focusY()-croppedH/2f),0,height-croppedH);
+            source=new android.graphics.Rect(0,top,width,top+croppedH);
+        }
+        RectF frame=new RectF(0,0,viewW,viewH);
         Path clip=new Path();clip.addRoundRect(frame,corner,corner,Path.Direction.CW);
         canvas.save();canvas.clipPath(clip);
-        canvas.drawColor(0xFF1C3550);
-        float cover=Math.max(w/bitmap.getWidth(),h/bitmap.getHeight());
-        float bw=bitmap.getWidth()*cover,bh=bitmap.getHeight()*cover;
-        Paint soft=new Paint(paint);soft.setAlpha(55);
-        canvas.drawBitmap(bitmap,null,new RectF((w-bw)/2f,(h-bh)/2f,(w+bw)/2f,(h+bh)/2f),soft);
-        canvas.drawBitmap(bitmap,null,new RectF(x,y,x+iw,y+ih),paint);
+        canvas.drawBitmap(bitmap,source,frame,paint);
         canvas.restore();
     }
 }
