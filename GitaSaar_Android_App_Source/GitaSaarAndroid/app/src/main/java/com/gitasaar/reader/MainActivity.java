@@ -91,6 +91,9 @@ public final class MainActivity extends Activity {
         QuoteScheduler.schedule(this);
         registerNetworkWatcher();
         refreshConnection();
+        if(!prefs.getBoolean("language_selected_once",false)){
+            getWindow().getDecorView().post(()->showLanguageDialog());
+        }
     }
     @Override protected void onResume(){super.onResume();if(root!=null) refreshConnection();}
     @Override protected void onDestroy(){
@@ -479,7 +482,7 @@ public final class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this)
             .setTitle("भाषा चुनें / Choose Language")
             .setSingleChoiceItems(langs,isEnglish()?1:0,(dialog,which)->{
-                prefs.edit().putString("app_language",which==1?"en":"hi").apply();
+                prefs.edit().putString("app_language",which==1?"en":"hi").putBoolean("language_selected_once",true).apply();
                 dialog.dismiss();
                 render();
             }).setNegativeButton(isEnglish()?"Cancel":"रद्द करें",null).show();
