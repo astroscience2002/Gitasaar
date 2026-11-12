@@ -592,12 +592,9 @@ public final class MainActivity extends Activity {
         for(int ch=1;ch<=18;ch++){
             final int number=ch;
             LinearLayout tile=card(), row=line();
-            // Audio lists must remain lightweight: loading 18 HD bitmaps at once
-            // can cause OutOfMemoryError and close the app on smaller phones.
-            TextView chapterNumber=text(String.format(Locale.US,"%02d",ch),20,SAFFRON,true);
-            chapterNumber.setGravity(Gravity.CENTER);
-            chapterNumber.setBackground(shape(LIGHT,13));
-            row.addView(chapterNumber,lp(58,62));
+            // Actual Krishna imagery returns. The lightweight View only decodes
+            // visible images at a sampled thumbnail size with a strict LRU limit.
+            row.addView(new KrishnaAudioThumb(this,ch),lp(72,76));
             LinearLayout details=stack();topPad(details,11,0,0,0);
             details.addView(text(tr("अध्याय "+ch,"Chapter "+ch),13,SAFFRON,true));
             details.addView(text(isEnglish()?GitaLocale.CHAPTERS_EN[ch-1]:NAMES[ch-1],14,INK,true),gap(4));
