@@ -2,22 +2,40 @@ plugins {
     id 'com.android.application'
 }
 
+def testAppId = 'ca-app-pub-3940256099942544~3347511713'
+def testBannerId = 'ca-app-pub-3940256099942544/9214589741'
+def suppliedAppId = (findProperty('ADMOB_APP_ID') ?: '').toString().trim()
+def suppliedBannerId = (findProperty('ADMOB_BANNER_ID') ?: '').toString().trim()
+def liveAdsConfigured = suppliedAppId.startsWith('ca-app-pub-') &&
+    suppliedAppId.contains('~') && !suppliedAppId.equals(testAppId) &&
+    suppliedBannerId.startsWith('ca-app-pub-') &&
+    suppliedBannerId.contains('/') && !suppliedBannerId.equals(testBannerId)
+
 android {
     namespace 'com.gitasaar.reader'
     compileSdk 36
 
     defaultConfig {
-        // IMPORTANT: Use a unique package ID before first Play Store release.
+        // Ensure this package name is available in your Play Console.
         applicationId 'com.gitasaar.reader'
         minSdk 26
         targetSdk 36
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 2
+        versionName '1.1.0'
     }
     buildTypes {
+        debug {
+            manifestPlaceholders = [admobAppId: testAppId]
+            buildConfigField 'String', 'BANNER_AD_UNIT_ID', '"' + testBannerId + '"'
+            buildConfigField 'boolean', 'ADS_ENABLED', 'true'
+        }
         release {
             minifyEnabled false
-            // Configure your own release signing key before uploading AAB to Play Store.
+            manifestPlaceholders = [admobAppId: liveAdsConfigured ? suppliedAppId : testAppId]
+            buildConfigField 'String', 'BANNER_AD_UNIT_ID', '"' + (liveAdsConfigured ? suppliedBannerId : testBannerId) + '"'
+            // Never ship active test ads; monetization requires real AdMob IDs.
+            buildConfigField 'boolean', 'ADS_ENABLED', liveAdsConfigured ? 'true' : 'false'
+            // Configure a PRIVATE signing key for your uploadable release AAB.
         }
     }
     compileOptions {
