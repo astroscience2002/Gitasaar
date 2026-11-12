@@ -89,7 +89,7 @@ public final class GitaAudioPlayer {
      */
     public static String cleanForSpeech(String source){
         if(source==null)return "";
-        String value=source.replace('\\u00a0',' ').trim();
+        String value=source.replace((char)160,' ').trim();
         value=value.replaceAll("^[\\s\\u0964\\u0965|।:;()]*[0-9\\u0966-\\u096f]+\\s*[.\\u0964\\u0965:,-]\\s*[0-9\\u0966-\\u096f]+[\\s\\u0964\\u0965|।:;()]*","");
         value=value.replaceAll("(?U)(?:[\\s|।\\u0965]+)[0-9\\u0966-\\u096f]+(?:\\s*[.:-]\\s*[0-9\\u0966-\\u096f]+)?[\\s|।\\u0965]*$","");
         value=value.replaceAll("[|\\u0964\\u0965]{2,}","।");
