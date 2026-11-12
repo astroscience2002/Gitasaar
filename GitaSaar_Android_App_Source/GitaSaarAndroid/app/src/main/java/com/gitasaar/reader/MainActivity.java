@@ -26,6 +26,7 @@ import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -204,6 +205,14 @@ public final class MainActivity extends Activity {
         if(back){
             TextView b=text("‹",34,Color.WHITE,true);b.setGravity(Gravity.CENTER);
             head.addView(b,lp(42,46));b.setOnClickListener(v->goBack());
+        }
+        if(!back){
+            ImageView logo=new ImageView(this);
+            logo.setImageResource(R.drawable.approved_krishna_gita_logo);
+            logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            LinearLayout.LayoutParams logoParams=lp(46,46);
+            logoParams.rightMargin=dp(10);
+            head.addView(logo,logoParams);
         }
         LinearLayout t=stack();
         TextView name=text(title,22,Color.rgb(255,225,168),true);t.addView(name);
