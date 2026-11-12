@@ -300,7 +300,7 @@ public final class MainActivity extends Activity {
             case SAVED:showSaved();break;
             case SETTINGS:showSettings();break;
             case GALLERY:showGallery();break;
-            case AUDIO:showAudio();break;
+            case AUDIO:showHome();break;
         }
         if(banner!=null&&banner.getParent()!=null)((ViewGroup)banner.getParent()).removeView(banner);
         if(banner!=null)root.addView(banner,lp(-1,50));
@@ -565,73 +565,21 @@ public final class MainActivity extends Activity {
                 render();
             }).setNegativeButton(isEnglish()?"Cancel":"रद्द करें",null).show();
     }
-    /** Make the Listen screen visible before starting the TTS engine.
-     * Rendering and voice start are intentionally separated to limit peak memory.
-     */
+    /** Independent Listen Activity, not the legacy embedded Audio view. */
     private void openListen(){
-        try{
-            current=Screen.AUDIO;
-            render();
-        }catch(Throwable failure){
-            CrashReporter.record(this,failure);
-            current=Screen.HOME;
-            try{render();}catch(Throwable ignored){}
-            toast(tr("Audio screen नहीं खुला। App दोबारा खोलकर crash report Copy करें।",
-                    "Could not open audio. Reopen the app and copy the crash report."));
-            return;
-        }
-        if(root!=null)root.postDelayed(()->{
-            if(current!=Screen.AUDIO||isFinishing()||isDestroyed())return;
-            if(audioPlayer!=null&&!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())
-                playSelectedChapter(1);
-        },180);
+        launchAudio(1);
     }
     private void playSelectedChapter(int chapter){
+        launchAudio(chapter);
+    }
+    private void launchAudio(int chapter){
         try{
-            List<GitaVerse> selection=new ArrayList<>();
-            for(GitaVerse v:repository.getAll())if(v.chapter==chapter)selection.add(v);
-            if(audioPlayer==null||!audioPlayer.playChapter(selection,true,isEnglish())){
-                toast(tr("फोन पर Audio शुरू नहीं हो पाया","Audio could not start on this phone"));
-            }else if(current!=Screen.AUDIO){
-                current=Screen.AUDIO;render();
-            }
+            Intent intent=new Intent(this,GitaAudioActivity.class);
+            intent.putExtra("chapter",Math.max(1,Math.min(18,chapter)));
+            startActivity(intent);
         }catch(Throwable failure){
             CrashReporter.record(this,failure);
-            toast(tr("Audio में समस्या आई। App दोबारा खोलकर crash report Copy करें।",
-                 "Audio error. Reopen app to copy crash report."));
-        }
-    }
-    private void showAudio(){
-        body.addView(new KrishnaVisual(this,7),new LinearLayout.LayoutParams(-1,dp(195)));
-        body.addView(text(tr("गीता सुनें","Listen to the Bhagavad Gita"),21,INK,true),gap(16));
-        body.addView(text(tr("फोन की Text-to-Speech आवाज़ में श्लोक और अर्थ सुनें। Pause के बाद वर्तमान श्लोक फिर शुरुआत से चलेगा।",
-         "Verses and meanings use your device's text-to-speech voice. Resume restarts the current verse."),13,MUTED,false),gap(8));
-        LinearLayout controls=card();
-        audioStatus=text(audioPlayer.getStatus(),14,INK,true);controls.addView(audioStatus);
-        audioToggle=button(audioPlayer.isPlaying()?tr("⏸  रोकें","⏸  Pause"):tr("▶  आगे सुनें","▶  Resume"),true);
-        controls.addView(audioToggle,gap(10));
-        audioToggle.setOnClickListener(v->{
-            if(audioPlayer.isPlaying())audioPlayer.pause();
-            else if(audioPlayer.hasPausedItem())audioPlayer.resume();
-            else playSelectedChapter(1);
-        });
-        TextView stop=button(tr("■  बंद करें","■  Stop"),false);
-        controls.addView(stop,gap(8));stop.setOnClickListener(v->audioPlayer.stop());
-        body.addView(controls,gap(15));
-        body.addView(text(tr("अध्याय चुनें","Choose a chapter"),19,INK,true),gap(18));
-        for(int ch=1;ch<=18;ch++){
-            final int number=ch;
-            LinearLayout tile=card(), row=line();
-            // Actual Krishna imagery returns. The lightweight View only decodes
-            // visible images at a sampled thumbnail size with a strict LRU limit.
-            row.addView(new KrishnaAudioThumb(this,ch),lp(72,76));
-            LinearLayout details=stack();topPad(details,11,0,0,0);
-            details.addView(text(tr("अध्याय "+ch,"Chapter "+ch),13,SAFFRON,true));
-            details.addView(text(isEnglish()?GitaLocale.CHAPTERS_EN[ch-1]:NAMES[ch-1],14,INK,true),gap(4));
-            details.addView(text(tr("▶  सुनने के लिए दबाएँ","▶  Tap to listen"),12,MUTED,false),gap(5));
-            row.addView(details,new LinearLayout.LayoutParams(0,-2,1));
-            tile.addView(row);body.addView(tile,gap(11));
-            tile.setOnClickListener(v->playSelectedChapter(number));
+            toast(tr("ऑडियो स्क्रीन खोलने में समस्या है","Unable to open audio"));
         }
     }
     private void showGallery(){
