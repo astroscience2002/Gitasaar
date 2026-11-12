@@ -380,7 +380,7 @@ public final class MainActivity extends Activity {
             LinearLayout item=card();
             item.addView(text(verse.reference(),13,SAFFRON,true));
             TextView sans=text(cut(verse.sanskrit,120),16,INK,true);item.addView(sans,gap(9));
-            item.addView(text(cut(verse.hindi,135),13,MUTED,false),gap(7));
+            item.addView(text(cut(verse.meaning(isEnglish()),135),13,MUTED,false),gap(7));
             TextView action=text("पूरा पढ़ें  ›",13,SAFFRON,true);item.addView(action,gap(11));
             body.addView(item,gap(12));
             item.setOnClickListener(v->{selectedVerse=verse;current=Screen.VERSE;render();});
@@ -415,7 +415,7 @@ public final class MainActivity extends Activity {
         TextView share=button("↗  शेयर",false);row.addView(share,new LinearLayout.LayoutParams(0,-2,1));
         share.setOnClickListener(view->{
             Intent intent=new Intent(Intent.ACTION_SEND);intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT,v.reference()+"\n\n"+v.sanskrit+"\n\nहिंदी अर्थ:\n"+v.hindi+"\n\nगीता सार");
+            intent.putExtra(Intent.EXTRA_TEXT,(isEnglish()?v.referenceEn():v.reference())+"\n\n"+v.sanskrit+"\n\n"+(isEnglish()?"English meaning:\n":"हिंदी अर्थ:\n")+v.meaning(isEnglish())+"\n\nGita Saar");
             startActivity(Intent.createChooser(intent,"श्लोक शेयर करें"));
         });
         return row;
@@ -445,6 +445,7 @@ public final class MainActivity extends Activity {
         for(GitaVerse verse:repository.getAll()){
             boolean matches=verse.sanskrit.toLowerCase(Locale.ROOT).contains(q)
               ||verse.hindi.toLowerCase(Locale.ROOT).contains(q)
+              ||verse.english.toLowerCase(Locale.ROOT).contains(q)
               ||(verse.chapter+":"+verse.number).equals(q)
               ||(verse.chapter+"-"+verse.number).equals(q);
             if(!matches)continue;
@@ -472,7 +473,7 @@ public final class MainActivity extends Activity {
             if(!bookmarks.contains(verse.id()))continue;
             LinearLayout item=card();item.addView(text(verse.reference(),13,SAFFRON,true));
             item.addView(text(cut(verse.sanskrit,120),17,INK,true),gap(7));
-            item.addView(text(cut(verse.hindi,150),13,MUTED,false),gap(8));
+            item.addView(text(cut(verse.meaning(isEnglish()),150),13,MUTED,false),gap(8));
             body.addView(item,gap(11));
             item.setOnClickListener(v->{selectedVerse=verse;current=Screen.VERSE;render();});
         }
