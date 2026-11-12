@@ -46,10 +46,11 @@ import java.util.Set;
 /** Gita Saar — online-required, chapter-based Bhagavad Gita reading experience.
  *  Google AdMob TEST units only; supply real IDs and complete consent setup before release. */
 public final class MainActivity extends Activity {
-    private static final int BG=Color.rgb(255,250,241), WHITE=Color.WHITE;
-    private static final int INK=Color.rgb(67,42,30), MUTED=Color.rgb(131,106,88);
+    private static final int BG=Color.rgb(255,248,231), WHITE=Color.WHITE;
+    private static final int INK=Color.rgb(24,45,78), MUTED=Color.rgb(116,88,63);
     private static final int SAFFRON=Color.rgb(216,101,30), GOLD=Color.rgb(248,177,75);
-    private static final int LIGHT=Color.rgb(255,237,211), BORDER=Color.rgb(241,224,204);
+    private static final int LIGHT=Color.rgb(255,237,211), BORDER=Color.rgb(232,196,146);
+    private static final int NAVY=Color.rgb(22,42,77);
     private static final String TEST_BANNER="ca-app-pub-3940256099942544/9214589741";
     private static final String[] NAMES={
         "अर्जुनविषादयोग","सांख्ययोग","कर्मयोग","ज्ञानकर्मसन्यासयोग","कर्मसन्यासयोग",
@@ -58,8 +59,10 @@ public final class MainActivity extends Activity {
         "पुरुषोत्तमयोग","दैवासुरसम्पद्विभागयोग","श्रद्धात्रयविभागयोग","मोक्षसन्यासयोग"};
     private static final int[] COUNTS={47,72,43,42,29,47,30,28,34,42,55,20,34,27,20,24,28,78};
 
-    private enum Screen{ HOME, CHAPTERS, CHAPTER, VERSE, SEARCH, SAVED, SETTINGS }
+    private enum Screen{ HOME, CHAPTERS, CHAPTER, VERSE, SEARCH, SAVED, SETTINGS, GALLERY }
     private Screen current=Screen.HOME;
+    private boolean isEnglish(){return prefs!=null && "en".equals(prefs.getString("app_language","hi"));}
+    private String tr(String h,String e){return isEnglish()?e:h;}
     private int selectedChapter=1;
     private GitaVerse selectedVerse;
     private LinearLayout root, content, body;
@@ -176,6 +179,7 @@ public final class MainActivity extends Activity {
         TextView v=new TextView(this);v.setText(value);v.setTextSize(size);v.setTextColor(color);
         v.setIncludeFontPadding(true);v.setLineSpacing(dp(2),1.1f);
         if(bold)v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        if(isEnglish())v.setText(GitaLocale.en(value));
         return v;
     }
     private void topPad(View v,int left,int top,int right,int bottom){v.setPadding(dp(left),dp(top),dp(right),dp(bottom));}
@@ -184,27 +188,29 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams p=lp(-1,-2);p.topMargin=dp(top);return p;
     }
     private void titleBar(String title,String subtitle, boolean back){
-        LinearLayout head=line();topPad(head,20,12,18,14);head.setBackgroundColor(BG);
+        LinearLayout head=line();topPad(head,20,12,18,14);head.setBackgroundColor(NAVY);
         if(back){
-            TextView b=text("‹",34,SAFFRON,true);b.setGravity(Gravity.CENTER);
+            TextView b=text("‹",34,Color.WHITE,true);b.setGravity(Gravity.CENTER);
             head.addView(b,lp(42,46));b.setOnClickListener(v->goBack());
         }
         LinearLayout t=stack();
-        TextView name=text(title,22,INK,true);t.addView(name);
+        TextView name=text(title,22,Color.rgb(255,225,168),true);t.addView(name);
         if(subtitle!=null&&!subtitle.isEmpty()){
-            TextView detail=text(subtitle,12,MUTED,false);t.addView(detail);
+            TextView detail=text(subtitle,12,Color.rgb(246,221,177),false);t.addView(detail);
         }
         LinearLayout.LayoutParams pt=new LinearLayout.LayoutParams(0,-2,1);
         head.addView(t,pt);
-        TextView om=text("ॐ",28,SAFFRON,true);om.setGravity(Gravity.CENTER);
-        head.addView(om,lp(44,44));root.addView(head,lp(-1,-2));
+        TextView language=text(isEnglish()?"EN ▾":"हिं ▾",13,Color.rgb(255,232,187),true);language.setGravity(Gravity.CENTER);
+        language.setBackground(bordered(NAVY,12,Color.rgb(209,147,59)));
+        head.addView(language,lp(58,42));language.setOnClickListener(v->showLanguageDialog());
+        root.addView(head,lp(-1,-2));
     }
     private void nav(){
         LinearLayout menu=line();topPad(menu,9,7,9,9);
         menu.setBackground(bordered(WHITE,0,BORDER));
-        String[] names={"आज","अध्याय","खोजें","सेव","सेटिंग"};
-        String[] icons={"✦","☷","⌕","♥","⚙"};
-        Screen[] screens={Screen.HOME,Screen.CHAPTERS,Screen.SEARCH,Screen.SAVED,Screen.SETTINGS};
+        String[] names={"आज","अध्याय","गैलरी","सेव","सेटिंग"};
+        String[] icons={"⌂","☷","▣","♥","⚙"};
+        Screen[] screens={Screen.HOME,Screen.CHAPTERS,Screen.GALLERY,Screen.SAVED,Screen.SETTINGS};
         for(int i=0;i<names.length;i++){
             int idx=i;Screen s=screens[i];
             LinearLayout item=stack();item.setGravity(Gravity.CENTER);
@@ -244,6 +250,7 @@ public final class MainActivity extends Activity {
             case SEARCH: title="श्लोक खोजें";subtitle="शब्द या 2:47 लिखकर खोजें";break;
             case SAVED: title="मेरे पसंदीदा श्लोक";subtitle="आपके सेव किए हुए श्लोक";break;
             case SETTINGS: title="सेटिंग्स";subtitle="नोटिफिकेशन और जानकारी";break;
+            case GALLERY: title="श्रीकृष्ण चित्र गैलरी";subtitle="भक्ति की सुंदर छवियाँ";break;
             default:break;
         }
         titleBar(title,subtitle,goBack);
@@ -262,6 +269,7 @@ public final class MainActivity extends Activity {
             case SEARCH:showSearch();break;
             case SAVED:showSaved();break;
             case SETTINGS:showSettings();break;
+            case GALLERY:showGallery();break;
         }
         if(banner!=null&&banner.getParent()!=null)((ViewGroup)banner.getParent()).removeView(banner);
         if(banner!=null)root.addView(banner,lp(-1,50));
@@ -298,13 +306,14 @@ public final class MainActivity extends Activity {
         TextView prefix=text("॥ श्रीमद्भगवद्गीता ॥",16,INK,true);hero.addView(prefix);
         hero.addView(text("हर दिन गीता से\nएक नई सीख",29,INK,true),gap(12));
         hero.addView(text("18 अध्याय • 700 श्लोक • हिंदी और English",13,INK,false),gap(8));
-        hero.addView(new KrishnaArtView(this),new LinearLayout.LayoutParams(-1,dp(135)));
+        hero.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(168)));
         TextView explore=button("गीता पढ़ना शुरू करें  →",true);
         LinearLayout.LayoutParams px=gap(18);hero.addView(explore,px);
         explore.setOnClickListener(v->{current=Screen.CHAPTERS;render();});
         body.addView(hero);
         LinearLayout guide=card();
-        guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true));
+        guide.addView(new KrishnaVisual(this,1),new LinearLayout.LayoutParams(-1,dp(122)));
+        guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true),gap(12));
         guide.addView(text("चिंता, रिश्ते, करियर, गुस्सा या कोई और परेशानी। गीता के संबंधित श्लोकों से मार्गदर्शन पाएँ।",15,INK,false),gap(10));
         TextView go=button("गीता से मार्गदर्शन पाएँ  →",true);guide.addView(go,gap(14));
         go.setOnClickListener(v->startActivity(new Intent(this,GuidanceActivity.class)));
@@ -312,10 +321,11 @@ public final class MainActivity extends Activity {
         GitaVerse today=QuoteScheduler.todayVerse(repository.getAll());
         if(today!=null){
             LinearLayout quote=card();
-            TextView eyebrow=text("✦  आज का गीता संदेश",15,SAFFRON,true);quote.addView(eyebrow);
+            quote.addView(new KrishnaVisual(this,2),new LinearLayout.LayoutParams(-1,dp(138)));
+            TextView eyebrow=text("✦  आज का गीता संदेश",15,SAFFRON,true);quote.addView(eyebrow,gap(12));
             quote.addView(text(today.reference(),12,MUTED,false),gap(5));
             quote.addView(text(today.sanskrit,19,INK,true),gap(17));
-            quote.addView(text(today.hindi,15,MUTED,false),gap(13));
+            quote.addView(text(today.meaning(isEnglish()),15,MUTED,false),gap(13));
             quote.addView(verseActions(today),gap(20));
             body.addView(quote,gap(17));
             TextView open=button("पूरा श्लोक पढ़ें",false);body.addView(open,gap(12));
@@ -337,8 +347,10 @@ public final class MainActivity extends Activity {
     }
     private void addChapterCard(int chapter){
         LinearLayout card=card();LinearLayout row=line();
+        KrishnaVisual illustration=new KrishnaVisual(this,1+((chapter-1)%3));
+        row.addView(illustration,lp(62,70));
         TextView badge=text(String.format(Locale.US,"%02d",chapter),21,SAFFRON,true);
-        badge.setGravity(Gravity.CENTER);badge.setBackground(shape(LIGHT,13));row.addView(badge,lp(57,57));
+        badge.setGravity(Gravity.CENTER);badge.setBackground(shape(LIGHT,13));badge.setVisibility(View.GONE);
         LinearLayout info=stack();topPad(info,12,0,4,0);
         info.addView(text("अध्याय " +chapter,13,MUTED,false));
         info.addView(text(NAMES[chapter-1],16,INK,true),gap(3));
@@ -376,7 +388,8 @@ public final class MainActivity extends Activity {
     private void showVerse(){
         if(selectedVerse==null)return;
         LinearLayout s=card();
-        s.addView(text("श्रीकृष्ण का संदेश",14,SAFFRON,true));
+        s.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(145)));
+        s.addView(text("श्रीकृष्ण का संदेश",14,SAFFRON,true),gap(13));
         s.addView(text(selectedVerse.reference(),13,MUTED,false),gap(3));
         s.addView(text(selectedVerse.sanskrit,22,INK,true),gap(23));
         View hr=new View(this);hr.setBackgroundColor(BORDER);
@@ -461,16 +474,38 @@ public final class MainActivity extends Activity {
             item.setOnClickListener(v->{selectedVerse=verse;current=Screen.VERSE;render();});
         }
     }
+    private void showLanguageDialog(){
+        final String[] langs={"हिंदी (Hindi)","English"};
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("भाषा चुनें / Choose Language")
+            .setSingleChoiceItems(langs,isEnglish()?1:0,(dialog,which)->{
+                prefs.edit().putString("app_language",which==1?"en":"hi").apply();
+                dialog.dismiss();
+                render();
+            }).setNegativeButton(isEnglish()?"Cancel":"रद्द करें",null).show();
+    }
+    private void showGallery(){
+        body.addView(text("श्रीकृष्ण चित्र गैलरी",23,INK,true),gap(7));
+        body.addView(text("भक्ति की सुंदर छवियाँ",14,MUTED,false),gap(8));
+        for(int i=1;i<=3;i++){
+            KrishnaVisual picture=new KrishnaVisual(this,i);
+            body.addView(picture,new LinearLayout.LayoutParams(-1,dp(235)));
+            TextView label=text("✦  श्रीकृष्ण",15,SAFFRON,true);body.addView(label,gap(10));
+            body.addView(new View(this),new LinearLayout.LayoutParams(-1,dp(14)));
+        }
+    }
     private void showSettings(){
         LinearLayout languages=card();
         languages.addView(text("🌐  भाषा / Language",19,INK,true));
         languages.addView(text("Sanskrit shlok with Hindi or English translation",13,MUTED,false),gap(7));
-        TextView hindi=button("हिंदी अर्थ",!"en".equals(prefs.getString("app_language","hi")));
-        TextView english=button("English Meaning","en".equals(prefs.getString("app_language","hi")));
+        TextView hindi=button("हिंदी",!"en".equals(prefs.getString("app_language","hi")));
+        TextView english=button("English","en".equals(prefs.getString("app_language","hi")));
         languages.addView(hindi,gap(10));languages.addView(english,gap(9));
         hindi.setOnClickListener(v->{prefs.edit().putString("app_language","hi").apply();render();});
         english.setOnClickListener(v->{prefs.edit().putString("app_language","en").apply();render();});
         body.addView(languages);
+        TextView gallery=button("श्रीकृष्ण चित्र गैलरी",false);body.addView(gallery,gap(12));
+        gallery.setOnClickListener(v->{current=Screen.GALLERY;render();});
         LinearLayout notif=card();
         notif.addView(text("🔔  रोज़ का गीता संदेश",19,INK,true));
         notif.addView(text("हर सुबह लगभग 8 बजे श्लोक और उसका हिंदी अर्थ नोटिफिकेशन में पाएँ। समय फोन की बैटरी सेटिंग पर निर्भर है।",14,MUTED,false),gap(9));
