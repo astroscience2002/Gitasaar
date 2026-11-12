@@ -29,8 +29,9 @@ public final class QuoteReceiver extends BroadcastReceiver {
     }
     private void showNotification(Context context) {
         if(Build.VERSION.SDK_INT>=33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
-        String title="आज का गीता संदेश";
-        String body="आज का श्लोक पढ़ने के लिए गीता सार खोलें।";
+        boolean english="en".equals(context.getSharedPreferences(QuoteScheduler.PREFS,Context.MODE_PRIVATE).getString("app_language","hi"));
+        String title=english?"Daily Gita Wisdom":"आज का गीता संदेश";
+        String body=english?"Open Gita Saar to read today\u0027s verse.":"आज का श्लोक पढ़ने के लिए गीता सार खोलें।";
         try {
             File file=new File(context.getFilesDir(),"gita_quote_index.json");
             if(file.isFile()) {
@@ -42,8 +43,8 @@ public final class QuoteReceiver extends BroadcastReceiver {
                 if(quotes.length()>0){
                     JSONObject quote=quotes.optJSONObject(QuoteScheduler.dailyIndex(quotes.length()));
                     if(quote!=null){
-                        title="गीता संदेश · "+quote.optString("reference","");
-                        body=quote.optString("hindi",body);
+                        title=(english?"Gita Wisdom · ":"गीता संदेश · ")+quote.optString("reference","");
+                        if(!english)body=quote.optString("hindi",body);
                     }
                 }
             }
@@ -52,7 +53,7 @@ public final class QuoteReceiver extends BroadcastReceiver {
         if(manager==null)return;
         String channel="gita_daily_quotes";
         if(Build.VERSION.SDK_INT>=26)manager.createNotificationChannel(new NotificationChannel(
-            channel,"रोज़ का गीता संदेश",NotificationManager.IMPORTANCE_DEFAULT));
+            channel,english?"Daily Gita Wisdom":"रोज़ का गीता संदेश",NotificationManager.IMPORTANCE_DEFAULT));
         Intent open=new Intent(context,MainActivity.class);
         open.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi=PendingIntent.getActivity(context,102,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
