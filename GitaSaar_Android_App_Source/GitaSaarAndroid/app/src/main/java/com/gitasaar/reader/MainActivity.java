@@ -83,6 +83,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        CrashReporter.install(this);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         if(Build.VERSION.SDK_INT>=26) getWindow().getDecorView().setSystemUiVisibility(
@@ -101,6 +102,10 @@ public final class MainActivity extends Activity {
         refreshConnection();
         if(!prefs.getBoolean("language_selected_once",false)){
             getWindow().getDecorView().post(()->showLanguageDialog());
+        }else{
+            getWindow().getDecorView().postDelayed(()->{
+                if(!isFinishing()&&!isDestroyed())CrashReporter.showOnNextLaunch(this);
+            },500);
         }
     }
     @Override protected void onResume(){super.onResume();if(root!=null) refreshConnection();}
@@ -241,9 +246,8 @@ public final class MainActivity extends Activity {
             item.addView(ic);item.addView(label);
             menu.addView(item,new LinearLayout.LayoutParams(0,dp(50),1));
             item.setOnClickListener(v->{
+                if(s==Screen.AUDIO){openListen();return;}
                 current=s;render();
-                if(s==Screen.AUDIO&&!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())
-                    playSelectedChapter(1);
             });
         }
         root.addView(menu,lp(-1,-2));
@@ -340,10 +344,7 @@ public final class MainActivity extends Activity {
         body.addView(hero);
         TextView audioShortcut=button(tr("♫  पूरी गीता सुनें  →","♫  Listen to the Gita  →"),true);
         body.addView(audioShortcut,gap(14));
-        audioShortcut.setOnClickListener(v->{
-            current=Screen.AUDIO;render();
-            if(!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())playSelectedChapter(1);
-        });
+        audioShortcut.setOnClickListener(v->openListen());
         LinearLayout guide=card();
         guide.addView(new KrishnaVisual(this,19),new LinearLayout.LayoutParams(-1,dp(155)));
         guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true),gap(12));
@@ -564,12 +565,41 @@ public final class MainActivity extends Activity {
                 render();
             }).setNegativeButton(isEnglish()?"Cancel":"रद्द करें",null).show();
     }
+    /** Make the Listen screen visible before starting the TTS engine.
+     * Rendering and voice start are intentionally separated to limit peak memory.
+     */
+    private void openListen(){
+        try{
+            current=Screen.AUDIO;
+            render();
+        }catch(Throwable failure){
+            CrashReporter.record(this,failure);
+            current=Screen.HOME;
+            try{render();}catch(Throwable ignored){}
+            toast(tr("Audio screen नहीं खुला। App दोबारा खोलकर crash report Copy करें।",
+                    "Could not open audio. Reopen the app and copy the crash report."));
+            return;
+        }
+        if(root!=null)root.postDelayed(()->{
+            if(current!=Screen.AUDIO||isFinishing()||isDestroyed())return;
+            if(audioPlayer!=null&&!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())
+                playSelectedChapter(1);
+        },180);
+    }
     private void playSelectedChapter(int chapter){
-        List<GitaVerse> selection=new ArrayList<>();
-        for(GitaVerse v:repository.getAll())if(v.chapter==chapter)selection.add(v);
-        if(!audioPlayer.playChapter(selection,true,isEnglish()))
-            toast(tr("Hindi आवाज़ उपलब्ध नहीं है","Install Hindi text-to-speech voice"));
-        else if(current!=Screen.AUDIO){current=Screen.AUDIO;render();}
+        try{
+            List<GitaVerse> selection=new ArrayList<>();
+            for(GitaVerse v:repository.getAll())if(v.chapter==chapter)selection.add(v);
+            if(audioPlayer==null||!audioPlayer.playChapter(selection,true,isEnglish())){
+                toast(tr("फोन पर Audio शुरू नहीं हो पाया","Audio could not start on this phone"));
+            }else if(current!=Screen.AUDIO){
+                current=Screen.AUDIO;render();
+            }
+        }catch(Throwable failure){
+            CrashReporter.record(this,failure);
+            toast(tr("Audio में समस्या आई। App दोबारा खोलकर crash report Copy करें।",
+                 "Audio error. Reopen app to copy crash report."));
+        }
     }
     private void showAudio(){
         body.addView(new KrishnaVisual(this,7),new LinearLayout.LayoutParams(-1,dp(195)));
