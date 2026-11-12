@@ -1,23 +1,13 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Premium Gita Saar mark: open scripture and Krishna's peacock feather. -->
-    <path android:fillColor="#D79931"
-        android:pathData="M16,52 Q31,41 54,55 Q77,41 92,52 L92,79 Q71,70 54,83 Q37,70 16,79 Z"/>
-    <path android:fillColor="#FFF1D0"
-        android:pathData="M19,52 Q34,47 52,59 L52,77 Q35,67 19,73 Z"/>
-    <path android:fillColor="#FFE0A2"
-        android:pathData="M56,59 Q74,47 89,52 L89,73 Q73,67 56,77 Z"/>
-    <path android:strokeColor="#995620" android:strokeWidth="2"
-        android:pathData="M54,59 L54,81"/>
-    <path android:fillColor="#159E8F"
-        android:pathData="M57,47 C44,26 66,11 77,24 C86,37 73,50 57,47 Z"/>
-    <path android:fillColor="#13427C"
-        android:pathData="M61,42 C56,29 70,25 74,33 C77,42 67,46 61,42 Z"/>
-    <path android:fillColor="#F4C66E"
-        android:pathData="M65,40 C62,34 69,31 71,36 C73,41 68,42 65,40 Z"/>
-    <path android:strokeColor="#E8C378" android:strokeWidth="1.7"
-        android:pathData="M46,60 Q61,42 69,18"/>
-    <path android:strokeColor="#E6B15E" android:strokeWidth="2"
-        android:pathData="M27,83 L81,83"/>
+ android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+ <path android:fillColor="#133154" android:pathData="M0,0 H108 V108 H0 Z"/>
+ <path android:fillColor="#DFA342" android:pathData="M13,55 Q33,42 54,57 Q75,42 95,55 L95,85 Q72,73 54,89 Q33,73 13,85 Z"/>
+ <path android:fillColor="#FFF1C9" android:pathData="M18,56 Q34,51 51,63 L51,82 Q34,72 18,77 Z"/>
+ <path android:fillColor="#F5D394" android:pathData="M57,63 Q73,51 90,56 L90,77 Q75,72 57,82 Z"/>
+ <path android:strokeColor="#9A6131" android:strokeWidth="2" android:pathData="M54,62 L54,87"/>
+ <path android:fillColor="#2BA97B" android:pathData="M57,52 C39,36 48,13 68,19 C85,23 80,44 57,52 Z"/>
+ <path android:fillColor="#16549E" android:pathData="M56,43 C50,30 59,24 66,30 C70,39 62,46 56,43 Z"/>
+ <path android:fillColor="#F4CF6E" android:pathData="M59,39 C56,35 62,33 64,37 C65,41 61,42 59,39 Z"/>
+ <path android:strokeColor="#F4D99B" android:strokeWidth="3" android:strokeLineCap="round" android:pathData="M36,65 L77,33"/>
+ <path android:strokeColor="#FFE8B4" android:strokeWidth="2" android:strokeLineCap="round" android:pathData="M29,52 L78,69"/>
 </vector>
