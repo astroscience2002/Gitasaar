@@ -583,8 +583,7 @@ public final class MainActivity extends Activity {
         audioToggle.setOnClickListener(v->{
             if(audioPlayer.isPlaying())audioPlayer.pause();
             else if(audioPlayer.hasPausedItem())audioPlayer.resume();
-            else if(!audioPlayer.playChapter(repository.getAll().subList(0,47),true,isEnglish()))
-                toast(tr("Audio उपलब्ध नहीं है","Audio unavailable"));
+            else playSelectedChapter(1);
         });
         TextView stop=button(tr("■  बंद करें","■  Stop"),false);
         controls.addView(stop,gap(8));stop.setOnClickListener(v->audioPlayer.stop());
@@ -593,7 +592,12 @@ public final class MainActivity extends Activity {
         for(int ch=1;ch<=18;ch++){
             final int number=ch;
             LinearLayout tile=card(), row=line();
-            row.addView(new KrishnaVisual(this,ch),lp(72,76));
+            // Audio lists must remain lightweight: loading 18 HD bitmaps at once
+            // can cause OutOfMemoryError and close the app on smaller phones.
+            TextView chapterNumber=text(String.format(Locale.US,"%02d",ch),20,SAFFRON,true);
+            chapterNumber.setGravity(Gravity.CENTER);
+            chapterNumber.setBackground(shape(LIGHT,13));
+            row.addView(chapterNumber,lp(58,62));
             LinearLayout details=stack();topPad(details,11,0,0,0);
             details.addView(text(tr("अध्याय "+ch,"Chapter "+ch),13,SAFFRON,true));
             details.addView(text(isEnglish()?GitaLocale.CHAPTERS_EN[ch-1]:NAMES[ch-1],14,INK,true),gap(4));
