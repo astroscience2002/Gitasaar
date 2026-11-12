@@ -240,7 +240,11 @@ public final class MainActivity extends Activity {
             TextView label=text(names[i],11,active?SAFFRON:MUTED,active);label.setGravity(Gravity.CENTER);
             item.addView(ic);item.addView(label);
             menu.addView(item,new LinearLayout.LayoutParams(0,dp(50),1));
-            item.setOnClickListener(v->{current=s;render();});
+            item.setOnClickListener(v->{
+                current=s;render();
+                if(s==Screen.AUDIO&&!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())
+                    playSelectedChapter(1);
+            });
         }
         root.addView(menu,lp(-1,-2));
     }
@@ -336,7 +340,10 @@ public final class MainActivity extends Activity {
         body.addView(hero);
         TextView audioShortcut=button(tr("♫  पूरी गीता सुनें  →","♫  Listen to the Gita  →"),true);
         body.addView(audioShortcut,gap(14));
-        audioShortcut.setOnClickListener(v->{current=Screen.AUDIO;render();});
+        audioShortcut.setOnClickListener(v->{
+            current=Screen.AUDIO;render();
+            if(!audioPlayer.isPlaying()&&!audioPlayer.hasPausedItem())playSelectedChapter(1);
+        });
         LinearLayout guide=card();
         guide.addView(new KrishnaVisual(this,19),new LinearLayout.LayoutParams(-1,dp(155)));
         guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true),gap(12));
@@ -573,36 +580,15 @@ public final class MainActivity extends Activity {
         audioStatus=text(audioPlayer.getStatus(),14,INK,true);controls.addView(audioStatus);
         audioToggle=button(audioPlayer.isPlaying()?tr("⏸  रोकें","⏸  Pause"):tr("▶  आगे सुनें","▶  Resume"),true);
         controls.addView(audioToggle,gap(10));
-        audioToggle.setOnClickListener(v->{if(audioPlayer.isPlaying())audioPlayer.pause();else audioPlayer.resume();});
+        audioToggle.setOnClickListener(v->{
+            if(audioPlayer.isPlaying())audioPlayer.pause();
+            else if(audioPlayer.hasPausedItem())audioPlayer.resume();
+            else if(!audioPlayer.playChapter(repository.getAll().subList(0,47),true,isEnglish()))
+                toast(tr("Audio उपलब्ध नहीं है","Audio unavailable"));
+        });
         TextView stop=button(tr("■  बंद करें","■  Stop"),false);
         controls.addView(stop,gap(8));stop.setOnClickListener(v->audioPlayer.stop());
         body.addView(controls,gap(15));
-        TextView voiceButton=button(tr("🎙  आवाज़ बदलें","🎙  Choose Voice"),false);
-        body.addView(voiceButton,gap(10));
-        voiceButton.setOnClickListener(v->{
-            java.util.List<android.speech.tts.Voice> voices=audioPlayer.availableHindiVoices();
-            if(voices.isEmpty()){
-                new android.app.AlertDialog.Builder(this)
-                    .setTitle(tr("हिंदी आवाज़ उपलब्ध नहीं है","No Hindi voice installed"))
-                    .setMessage(tr("फोन की Settings में Text-to-Speech खोलकर बेहतर Hindi voice डाउनलोड करें।",
-                        "Open Android Settings → Text-to-Speech to install a higher quality Hindi voice."))
-                    .setPositiveButton("OK",null).show();
-                return;
-            }
-            String[] labels=new String[voices.size()];
-            for(int i=0;i<voices.size();i++){
-                android.speech.tts.Voice voice=voices.get(i);
-                labels[i]=voice.getName()+ (voice.isNetworkConnectionRequired()?" (Online)":" (Offline)");
-            }
-            new android.app.AlertDialog.Builder(this)
-                .setTitle(tr("हिंदी आवाज़ चुनें","Choose Hindi voice"))
-                .setItems(labels,(dialog,index)->{
-                    audioPlayer.chooseHindiVoice(voices.get(index).getName());
-                    toast(tr("आवाज़ बदल दी है","Voice changed"));
-                }).setNegativeButton(tr("रद्द करें","Cancel"),null).show();
-        });
-        body.addView(text(tr("अच्छी आवाज़ के लिए फोन की Speech Services में Hindi voice डाउनलोड करें।",
-            "For a more natural sound, install a higher-quality Hindi voice in your device speech settings."),12,MUTED,false),gap(8));
         body.addView(text(tr("अध्याय चुनें","Choose a chapter"),19,INK,true),gap(18));
         for(int ch=1;ch<=18;ch++){
             final int number=ch;
