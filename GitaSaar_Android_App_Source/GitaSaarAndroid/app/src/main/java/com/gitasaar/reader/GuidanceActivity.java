@@ -54,8 +54,8 @@ public final class GuidanceActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         screen.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=column();content.setPadding(dp(18),dp(18),dp(18),dp(30));scroll.addView(content);
-        KrishnaArtView art=new KrishnaArtView(this);
-        content.addView(art,new LinearLayout.LayoutParams(-1,dp(146)));
+        KrishnaVisual art=new KrishnaVisual(this,2);
+        content.addView(art,new LinearLayout.LayoutParams(-1,dp(150)));
         margin(content,text(tr("आपके मन में क्या चल रहा है?","What's on your mind?"),22,ink,true),19);
         margin(content,text(tr("हिंदी, English या Hinglish में लिखें। आपका सवाल इस फोन पर ही जाँचा जाएगा।","Write in Hindi, English or Hinglish. Your question is matched on this device."),13,Color.DKGRAY,false),8);
         problem=new EditText(this);problem.setTextSize(16);problem.setTextColor(ink);
