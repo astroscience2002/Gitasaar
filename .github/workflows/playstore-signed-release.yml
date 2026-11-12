@@ -31,6 +31,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Include all 18 chapter images in signed release
+        working-directory: .
+        run: |
+          mkdir -p /tmp/krishna-images
+          unzip -oq GitaSaar_18_Images_Integrated_Source.zip -d /tmp/krishna-images
+          mkdir -p GitaSaar_Android_App_Source/GitaSaarAndroid/app/src/main/assets/krishna
+          cp /tmp/krishna-images/GitaSaarAndroid/app/src/main/assets/krishna/*.webp GitaSaar_Android_App_Source/GitaSaarAndroid/app/src/main/assets/krishna/
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("GitaSaar_Android_App_Source/GitaSaarAndroid/app/src/main/assets/krishna")
+          files=[root/f"chapter_{i:02}.webp" for i in range(1,19)]
+          files += [root/(x+".webp") for x in ("home_banner","guidance_banner","daily_quote","verse_banner")]
+          assert all(f.is_file() for f in files), "Missing Krishna artwork in signed release"
+          PY
       - name: Bundle original public-domain artwork
         run: python3 scripts/fetch_art.py
       - name: Restore private upload signing key
