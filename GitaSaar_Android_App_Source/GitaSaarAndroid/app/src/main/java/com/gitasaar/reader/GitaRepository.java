@@ -47,9 +47,9 @@ public final class GitaRepository {
             String error = null;
             List<GitaVerse> loaded = Collections.emptyList();
             try {
-                JSONObject base = new JSONObject(readOrDownload("gita_base.json", DATA_URLS[0]));
-                JSONObject hindi = new JSONObject(readOrDownload("gita_hi.json", DATA_URLS[1]));
-                JSONObject english = new JSONObject(readOrDownload("gita_en.json", DATA_URLS[2]));
+                JSONObject base = new JSONObject(readAsset("gita/base.json"));
+                JSONObject hindi = new JSONObject(readAsset("gita/hi.json"));
+                JSONObject english = new JSONObject(readAsset("gita/en.json"));
                 TreeMap<String, RawVerse> entries = new TreeMap<>();
                 harvest(base, entries, "base");
                 harvest(hindi, entries, "hi");
@@ -64,7 +64,14 @@ public final class GitaRepository {
                         item.english.isEmpty() ? "English translation not available." : item.english));
                 }
                 all.sort(Comparator.comparingInt((GitaVerse v) -> v.chapter).thenComparingInt(v -> v.number));
-                if (all.size() < 690 || all.size() > 710) throw new IOException("Dataset में " + all.size() + " श्लोक मिले, 700 होने चाहिए।");
+                if (all.size()!=700) throw new IOException("Incomplete Bhagavad Gita: "+all.size()+"/700 verses");
+                final int[] expected={47,72,43,42,29,47,30,28,34,42,55,20,34,27,20,24,28,78};
+                int[] found=new int[18];
+                for(GitaVerse verse:all){
+                    if(verse.number>expected[verse.chapter-1])throw new IOException("Invalid verse "+verse.id());
+                    found[verse.chapter-1]++;
+                }
+                for(int i=0;i<18;i++)if(found[i]!=expected[i])throw new IOException("Chapter "+(i+1)+" has "+found[i]+" of "+expected[i]+" verses");
                 loaded = Collections.unmodifiableList(all);
                 QuoteScheduler.saveQuotes(context, loaded);
             } catch (Exception e) { error = e.getMessage(); }
@@ -175,6 +182,18 @@ public final class GitaRepository {
             }
         }
         return "";
+    }
+
+    /** Bundle all 700 verses and both translations inside the APK so reading never
+     * depends on a third-party CDN being available at run time. Online requirement
+     * stays controlled by the main app network gate at user request. */
+    private String readAsset(String name) throws IOException {
+        try(InputStream in=context.getAssets().open(name);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] bytes=new byte[16384];int n;
+            while((n=in.read(bytes))!=-1)out.write(bytes,0,n);
+            return out.toString(StandardCharsets.UTF_8.name());
+        }
     }
 
     private String readOrDownload(String filename,String[] urls) throws Exception {
