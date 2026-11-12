@@ -23,6 +23,17 @@ android {
         versionCode 2
         versionName '1.1.0'
     }
+    signingConfigs {
+        upload {
+            // The keystore is supplied at release build time, never committed to GitHub.
+            if (System.getenv('PLAY_UPLOAD_KEYSTORE_FILE')) {
+                storeFile file(System.getenv('PLAY_UPLOAD_KEYSTORE_FILE'))
+                storePassword System.getenv('PLAY_UPLOAD_STORE_PASSWORD')
+                keyAlias System.getenv('PLAY_UPLOAD_KEY_ALIAS')
+                keyPassword System.getenv('PLAY_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         debug {
             manifestPlaceholders = [admobAppId: testAppId]
@@ -35,7 +46,10 @@ android {
             buildConfigField 'String', 'BANNER_AD_UNIT_ID', '"' + (liveAdsConfigured ? suppliedBannerId : testBannerId) + '"'
             // Never ship active test ads; monetization requires real AdMob IDs.
             buildConfigField 'boolean', 'ADS_ENABLED', liveAdsConfigured ? 'true' : 'false'
-            // Configure a PRIVATE signing key for your uploadable release AAB.
+            if (System.getenv('PLAY_UPLOAD_KEYSTORE_FILE')) {
+                signingConfig signingConfigs.upload
+            }
+            // Release bundle stays unsigned unless a private signing key is present.
         }
     }
     compileOptions {
