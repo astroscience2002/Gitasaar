@@ -31,6 +31,7 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".GitaAudioActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".GuidanceActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
 
         <receiver android:name=".QuoteReceiver" android:exported="false" />
