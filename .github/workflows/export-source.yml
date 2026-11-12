@@ -1,0 +1,23 @@
+name: Export latest Gita Saar source
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/export-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package the current project and its included assets
+        run: |
+          cd GitaSaar_Android_App_Source
+          zip -qr ../GitaSaar_Current_Source.zip GitaSaarAndroid -x "*/build/*" "*/.gradle/*"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latest-gitasaar-source
+          path: GitaSaar_Current_Source.zip
+          retention-days: 3
