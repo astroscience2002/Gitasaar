@@ -17,7 +17,7 @@ public final class GitaLocale {
         "Three Kinds of Faith","Liberation and Renunciation"
     };
     static {
-        m("गीता सार","Gita Saar");m("श्रीमद्भगवद्गीता","Bhagavad Gita");
+        m("गीता सार","Krishna Gita");m("श्रीकृष्ण गीता","Krishna Gita");m("सुनें","Listen");m("श्रीमद्भगवद्गीता","Bhagavad Gita");
         m("॥ श्रीमद्भगवद्गीता ॥","॥ Bhagavad Gita ॥");
         m("आज","Home");m("अध्याय","Chapters");m("खोजें","Search");
         m("सेव","Saved");m("सेटिंग","Settings");m("गैलरी","Gallery");
