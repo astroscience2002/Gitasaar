@@ -30,7 +30,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.speech.tts.TextToSpeech;
+
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -60,7 +60,7 @@ public final class MainActivity extends Activity {
         "पुरुषोत्तमयोग","दैवासुरसम्पद्विभागयोग","श्रद्धात्रयविभागयोग","मोक्षसन्यासयोग"};
     private static final int[] COUNTS={47,72,43,42,29,47,30,28,34,42,55,20,34,27,20,24,28,78};
 
-    private enum Screen{ HOME, CHAPTERS, CHAPTER, VERSE, SEARCH, SAVED, SETTINGS, GALLERY }
+    private enum Screen{ HOME, CHAPTERS, CHAPTER, VERSE, SEARCH, SAVED, SETTINGS, GALLERY, AUDIO }
     private Screen current=Screen.HOME;
     private boolean isEnglish(){return prefs!=null && "en".equals(prefs.getString("app_language","hi"));}
     private String tr(String h,String e){return isEnglish()?e:h;}
@@ -70,8 +70,8 @@ public final class MainActivity extends Activity {
     private FrameLayout bodyFrame;
     private AdView banner;
     private GitaRepository repository;
-    private TextToSpeech textToSpeech;
-    private boolean speechReady;
+    private GitaAudioPlayer audioPlayer;
+    private TextView audioStatus, audioToggle;
     private SharedPreferences prefs;
     private ConnectivityManager networkManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -89,12 +89,9 @@ public final class MainActivity extends Activity {
         prefs=getSharedPreferences(QuoteScheduler.PREFS,MODE_PRIVATE);
         bookmarks=new HashSet<>(prefs.getStringSet("bookmarks",new HashSet<>()));
         repository=new GitaRepository(this);
-        textToSpeech=new TextToSpeech(this,status->{
-            speechReady=status==TextToSpeech.SUCCESS;
-            if(speechReady && textToSpeech!=null) {
-                textToSpeech.setLanguage(new Locale("hi","IN"));
-                textToSpeech.setSpeechRate(0.82f);
-            }
+        audioPlayer=new GitaAudioPlayer(this,(message,playing)->{
+            if(audioStatus!=null)audioStatus.setText(message);
+            if(audioToggle!=null)audioToggle.setText(playing?tr("⏸  रोकें","⏸  Pause"):tr("▶  आगे सुनें","▶  Resume"));
         });
         networkManager=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         createRoot();
@@ -111,7 +108,7 @@ public final class MainActivity extends Activity {
             try{networkManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}
         }
         if(banner!=null)banner.destroy();
-        if(textToSpeech!=null){textToSpeech.stop();textToSpeech.shutdown();}
+        if(audioPlayer!=null)audioPlayer.close();
         super.onDestroy();
     }
     private void createRoot() {
@@ -147,6 +144,7 @@ public final class MainActivity extends Activity {
     private void refreshConnection(){
         boolean online=isOnline();
         if(!online){
+            if(audioPlayer!=null&&audioPlayer.isPlaying())audioPlayer.pause();
             hasConnectivity=false;
             showOffline();
             return;
@@ -222,9 +220,9 @@ public final class MainActivity extends Activity {
     private void nav(){
         LinearLayout menu=line();topPad(menu,9,7,9,9);
         menu.setBackground(bordered(WHITE,0,BORDER));
-        String[] names={"आज","अध्याय","गैलरी","सेव","सेटिंग"};
-        String[] icons={"⌂","☷","▣","♥","⚙"};
-        Screen[] screens={Screen.HOME,Screen.CHAPTERS,Screen.GALLERY,Screen.SAVED,Screen.SETTINGS};
+        String[] names={"आज","अध्याय","सुनें","गैलरी","सेव","सेटिंग"};
+        String[] icons={"⌂","☷","♫","▣","♡","⚙"};
+        Screen[] screens={Screen.HOME,Screen.CHAPTERS,Screen.AUDIO,Screen.GALLERY,Screen.SAVED,Screen.SETTINGS};
         for(int i=0;i<names.length;i++){
             int idx=i;Screen s=screens[i];
             LinearLayout item=stack();item.setGravity(Gravity.CENTER);
@@ -256,7 +254,7 @@ public final class MainActivity extends Activity {
         if(!isOnline()){showOffline();return;}
         root.removeAllViews();
         boolean goBack=current==Screen.CHAPTER||current==Screen.VERSE;
-        String title="गीता सार",subtitle="श्रीमद्भगवद्गीता";
+        String title=tr("श्रीकृष्ण गीता","Krishna Gita"),subtitle="श्रीमद्भगवद्गीता";
         switch(current){
             case CHAPTERS: title="18 अध्याय";subtitle="संपूर्ण भगवद्गीता";break;
             case CHAPTER: title="अध्याय "+selectedChapter;subtitle=NAMES[selectedChapter-1];break;
@@ -265,6 +263,7 @@ public final class MainActivity extends Activity {
             case SAVED: title="मेरे पसंदीदा श्लोक";subtitle="आपके सेव किए हुए श्लोक";break;
             case SETTINGS: title="सेटिंग्स";subtitle="नोटिफिकेशन और जानकारी";break;
             case GALLERY: title="श्रीकृष्ण चित्र गैलरी";subtitle="भक्ति की सुंदर छवियाँ";break;
+            case AUDIO: title=tr("गीता ऑडियो","Gita Audio");subtitle=tr("श्लोक और अर्थ सुनें","Listen to verses and meanings");break;
             default:break;
         }
         titleBar(title,subtitle,goBack);
@@ -284,6 +283,7 @@ public final class MainActivity extends Activity {
             case SAVED:showSaved();break;
             case SETTINGS:showSettings();break;
             case GALLERY:showGallery();break;
+            case AUDIO:showAudio();break;
         }
         if(banner!=null&&banner.getParent()!=null)((ViewGroup)banner.getParent()).removeView(banner);
         if(banner!=null)root.addView(banner,lp(-1,50));
@@ -320,13 +320,16 @@ public final class MainActivity extends Activity {
         TextView prefix=text("॥ श्रीमद्भगवद्गीता ॥",16,INK,true);hero.addView(prefix);
         hero.addView(text("हर दिन गीता से\nएक नई सीख",29,INK,true),gap(12));
         hero.addView(text("18 अध्याय • 700 श्लोक • हिंदी और English",13,INK,false),gap(8));
-        hero.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(168)));
+        hero.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(220)));
         TextView explore=button("गीता पढ़ना शुरू करें  →",true);
         LinearLayout.LayoutParams px=gap(18);hero.addView(explore,px);
         explore.setOnClickListener(v->{current=Screen.CHAPTERS;render();});
         body.addView(hero);
+        TextView audioShortcut=button(tr("♫  पूरी गीता सुनें  →","♫  Listen to the Gita  →"),true);
+        body.addView(audioShortcut,gap(14));
+        audioShortcut.setOnClickListener(v->{current=Screen.AUDIO;render();});
         LinearLayout guide=card();
-        guide.addView(new KrishnaVisual(this,1),new LinearLayout.LayoutParams(-1,dp(122)));
+        guide.addView(new KrishnaVisual(this,19),new LinearLayout.LayoutParams(-1,dp(155)));
         guide.addView(text("✦  अपनी समस्या लिखें",22,SAFFRON,true),gap(12));
         guide.addView(text("चिंता, रिश्ते, करियर, गुस्सा या कोई और परेशानी। गीता के संबंधित श्लोकों से मार्गदर्शन पाएँ।",15,INK,false),gap(10));
         TextView go=button("गीता से मार्गदर्शन पाएँ  →",true);guide.addView(go,gap(14));
@@ -335,7 +338,7 @@ public final class MainActivity extends Activity {
         GitaVerse today=QuoteScheduler.todayVerse(repository.getAll());
         if(today!=null){
             LinearLayout quote=card();
-            quote.addView(new KrishnaVisual(this,2),new LinearLayout.LayoutParams(-1,dp(138)));
+            quote.addView(new KrishnaVisual(this,20),new LinearLayout.LayoutParams(-1,dp(172)));
             TextView eyebrow=text("✦  आज का गीता संदेश",15,SAFFRON,true);quote.addView(eyebrow,gap(12));
             quote.addView(text(today.reference(),12,MUTED,false),gap(5));
             quote.addView(text(today.sanskrit,19,INK,true),gap(17));
@@ -361,7 +364,7 @@ public final class MainActivity extends Activity {
     }
     private void addChapterCard(int chapter){
         LinearLayout card=card();LinearLayout row=line();
-        KrishnaVisual illustration=new KrishnaVisual(this,1+((chapter-1)%3));
+        KrishnaVisual illustration=new KrishnaVisual(this,chapter);
         row.addView(illustration,lp(62,70));
         TextView badge=text(String.format(Locale.US,"%02d",chapter),21,SAFFRON,true);
         badge.setGravity(Gravity.CENTER);badge.setBackground(shape(LIGHT,13));badge.setVisibility(View.GONE);
@@ -384,6 +387,9 @@ public final class MainActivity extends Activity {
         head.addView(text("अध्याय "+selectedChapter+" · "+NAMES[selectedChapter-1],19,INK,true));
         head.addView(text(COUNTS[selectedChapter-1]+" श्लोक",13,MUTED,false),gap(4));
         body.addView(head);
+        TextView audioChapter=button(tr("▶  अध्याय सुनें","▶  Listen to chapter"),true);
+        body.addView(audioChapter,gap(13));
+        audioChapter.setOnClickListener(v->playSelectedChapter(selectedChapter));
         int count=0;
         for(GitaVerse verse:repository.getAll()){
             if(verse.chapter!=selectedChapter)continue;
@@ -402,7 +408,7 @@ public final class MainActivity extends Activity {
     private void showVerse(){
         if(selectedVerse==null)return;
         LinearLayout s=card();
-        s.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(145)));
+        s.addView(new KrishnaVisual(this,21),new LinearLayout.LayoutParams(-1,dp(180)));
         s.addView(text("श्रीकृष्ण का संदेश",14,SAFFRON,true),gap(13));
         s.addView(text(selectedVerse.reference(),13,MUTED,false),gap(3));
         int verseFont=prefs.getInt("verse_font_size",22);
@@ -421,9 +427,9 @@ public final class MainActivity extends Activity {
         smaller.setOnClickListener(v->{prefs.edit().putInt("verse_font_size",Math.max(18,prefs.getInt("verse_font_size",22)-2)).apply();render();});
         bigger.setOnClickListener(v->{prefs.edit().putInt("verse_font_size",Math.min(32,prefs.getInt("verse_font_size",22)+2)).apply();render();});
         listen.setOnClickListener(v->{
-            if(textToSpeech!=null&&speechReady)
-                textToSpeech.speak(selectedVerse.sanskrit,TextToSpeech.QUEUE_FLUSH,null,"gita_verse");
-            else toast(tr("फोन में Hindi text-to-speech उपलब्ध नहीं है","Hindi speech engine is unavailable on this phone"));
+            if(audioPlayer.isPlaying())audioPlayer.pause();
+            else if(!audioPlayer.playVerse(selectedVerse,true,isEnglish()))
+                toast(tr("Hindi आवाज़ उपलब्ध नहीं है","Install Hindi text-to-speech voice"));
         });
         s.addView(verseActions(selectedVerse),gap(21));
         LinearLayout navigation=line();
@@ -469,7 +475,7 @@ public final class MainActivity extends Activity {
         TextView share=button("↗  शेयर",false);row.addView(share,new LinearLayout.LayoutParams(0,-2,1));
         share.setOnClickListener(view->{
             Intent intent=new Intent(Intent.ACTION_SEND);intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT,(isEnglish()?v.referenceEn():v.reference())+"\n\n"+v.sanskrit+"\n\n"+(isEnglish()?"English meaning:\n":"हिंदी अर्थ:\n")+v.meaning(isEnglish())+"\n\nGita Saar");
+            intent.putExtra(Intent.EXTRA_TEXT,(isEnglish()?v.referenceEn():v.reference())+"\n\n"+v.sanskrit+"\n\n"+(isEnglish()?"English meaning:\n":"हिंदी अर्थ:\n")+v.meaning(isEnglish())+"\n\nKrishna Gita");
             startActivity(Intent.createChooser(intent,"श्लोक शेयर करें"));
         });
         return row;
@@ -542,14 +548,58 @@ public final class MainActivity extends Activity {
                 render();
             }).setNegativeButton(isEnglish()?"Cancel":"रद्द करें",null).show();
     }
+    private void playSelectedChapter(int chapter){
+        List<GitaVerse> selection=new ArrayList<>();
+        for(GitaVerse v:repository.getAll())if(v.chapter==chapter)selection.add(v);
+        if(!audioPlayer.playChapter(selection,true,isEnglish()))
+            toast(tr("Hindi आवाज़ उपलब्ध नहीं है","Install Hindi text-to-speech voice"));
+        else if(current!=Screen.AUDIO){current=Screen.AUDIO;render();}
+    }
+    private void showAudio(){
+        body.addView(new KrishnaVisual(this,7),new LinearLayout.LayoutParams(-1,dp(195)));
+        body.addView(text(tr("गीता सुनें","Listen to the Bhagavad Gita"),21,INK,true),gap(16));
+        body.addView(text(tr("फोन की Text-to-Speech आवाज़ में श्लोक और अर्थ सुनें। Pause के बाद वर्तमान श्लोक फिर शुरुआत से चलेगा।",
+         "Verses and meanings use your device's text-to-speech voice. Resume restarts the current verse."),13,MUTED,false),gap(8));
+        LinearLayout controls=card();
+        audioStatus=text(audioPlayer.getStatus(),14,INK,true);controls.addView(audioStatus);
+        audioToggle=button(audioPlayer.isPlaying()?tr("⏸  रोकें","⏸  Pause"):tr("▶  आगे सुनें","▶  Resume"),true);
+        controls.addView(audioToggle,gap(10));
+        audioToggle.setOnClickListener(v->{if(audioPlayer.isPlaying())audioPlayer.pause();else audioPlayer.resume();});
+        TextView stop=button(tr("■  बंद करें","■  Stop"),false);
+        controls.addView(stop,gap(8));stop.setOnClickListener(v->audioPlayer.stop());
+        body.addView(controls,gap(15));
+        body.addView(text(tr("अध्याय चुनें","Choose a chapter"),19,INK,true),gap(18));
+        for(int ch=1;ch<=18;ch++){
+            final int number=ch;
+            LinearLayout tile=card(), row=line();
+            row.addView(new KrishnaVisual(this,ch),lp(72,76));
+            LinearLayout details=stack();topPad(details,11,0,0,0);
+            details.addView(text(tr("अध्याय "+ch,"Chapter "+ch),13,SAFFRON,true));
+            details.addView(text(isEnglish()?GitaLocale.CHAPTERS_EN[ch-1]:NAMES[ch-1],14,INK,true),gap(4));
+            details.addView(text(tr("▶  सुनने के लिए दबाएँ","▶  Tap to listen"),12,MUTED,false),gap(5));
+            row.addView(details,new LinearLayout.LayoutParams(0,-2,1));
+            tile.addView(row);body.addView(tile,gap(11));
+            tile.setOnClickListener(v->playSelectedChapter(number));
+        }
+    }
     private void showGallery(){
-        body.addView(text("श्रीकृष्ण चित्र गैलरी",23,INK,true),gap(7));
-        body.addView(text("भक्ति की सुंदर छवियाँ",14,MUTED,false),gap(8));
-        for(int i=1;i<=3;i++){
-            KrishnaVisual picture=new KrishnaVisual(this,i);
-            body.addView(picture,new LinearLayout.LayoutParams(-1,dp(235)));
-            TextView label=text("✦  श्रीकृष्ण",15,SAFFRON,true);body.addView(label,gap(10));
-            body.addView(new View(this),new LinearLayout.LayoutParams(-1,dp(14)));
+        body.addView(text(isEnglish()?"Krishna Art Gallery":"श्रीकृष्ण चित्र गैलरी",23,INK,true),gap(7));
+        body.addView(text(isEnglish()?"18 unique chapter artworks":"सभी 18 अध्यायों की अलग तस्वीरें",14,MUTED,false),gap(8));
+        for(int rowNum=0;rowNum<9;rowNum++){
+            LinearLayout pair=line();
+            for(int column=0;column<2;column++){
+                final int chapter=rowNum*2+column+1;
+                LinearLayout tile=stack();topPad(tile,6,6,6,12);
+                tile.setBackground(bordered(WHITE,15,BORDER));
+                tile.addView(new KrishnaVisual(this,chapter),new LinearLayout.LayoutParams(-1,dp(156)));
+                tile.addView(text(isEnglish()?"Chapter "+chapter:"अध्याय "+chapter,14,SAFFRON,true),gap(8));
+                tile.addView(text(isEnglish()?GitaLocale.CHAPTERS_EN[chapter-1]:NAMES[chapter-1],12,INK,false),gap(4));
+                LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(0,-2,1);
+                if(column==0)size.rightMargin=dp(9);
+                pair.addView(tile,size);
+                tile.setOnClickListener(v->{selectedChapter=chapter;current=Screen.CHAPTER;render();});
+            }
+            body.addView(pair,gap(12));
         }
     }
     private void showSettings(){
