@@ -35,7 +35,7 @@ for target,source in IMAGES.items():
                 headers={"User-Agent":"GitaSaarAndroid/1.0 (open-source educational app; https://github.com/astroscience2002/Gitasaar)"}
                 with urlopen(Request(url,headers=headers),timeout=50) as response:
                     data=response.read(12000000)
-                if not data.startswith(b"\\xff\\xd8") or len(data)<100000:
+                if not data.startswith(bytes([0xff,0xd8])) or len(data)<100000:
                     raise ValueError("Not a high resolution JPEG: "+str(len(data)))
                 output.write_bytes(data)
                 print(target,len(data),"bytes",flush=True)
