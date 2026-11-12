@@ -1,6 +1,23 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFF8E5" android:pathData="M54,18 C40,28 32,43 33,53 C42,51 50,43 54,35 C58,43 66,51 75,53 C76,43 68,28 54,18Z"/>
-    <path android:fillColor="#FFE1A9" android:pathData="M24,45 C20,65 34,77 54,81 C74,77 88,65 84,45 C73,50 64,61 54,67 C44,61 35,50 24,45Z"/>
-    <path android:strokeColor="#FFF8E5" android:strokeWidth="4" android:strokeLineCap="round" android:pathData="M25,83 L83,83"/>
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Premium Gita Saar mark: open scripture and Krishna's peacock feather. -->
+    <path android:fillColor="#D79931"
+        android:pathData="M16,52 Q31,41 54,55 Q77,41 92,52 L92,79 Q71,70 54,83 Q37,70 16,79 Z"/>
+    <path android:fillColor="#FFF1D0"
+        android:pathData="M19,52 Q34,47 52,59 L52,77 Q35,67 19,73 Z"/>
+    <path android:fillColor="#FFE0A2"
+        android:pathData="M56,59 Q74,47 89,52 L89,73 Q73,67 56,77 Z"/>
+    <path android:strokeColor="#995620" android:strokeWidth="2"
+        android:pathData="M54,59 L54,81"/>
+    <path android:fillColor="#159E8F"
+        android:pathData="M57,47 C44,26 66,11 77,24 C86,37 73,50 57,47 Z"/>
+    <path android:fillColor="#13427C"
+        android:pathData="M61,42 C56,29 70,25 74,33 C77,42 67,46 61,42 Z"/>
+    <path android:fillColor="#F4C66E"
+        android:pathData="M65,40 C62,34 69,31 71,36 C73,41 68,42 65,40 Z"/>
+    <path android:strokeColor="#E8C378" android:strokeWidth="1.7"
+        android:pathData="M46,60 Q61,42 69,18"/>
+    <path android:strokeColor="#E6B15E" android:strokeWidth="2"
+        android:pathData="M27,83 L81,83"/>
 </vector>
