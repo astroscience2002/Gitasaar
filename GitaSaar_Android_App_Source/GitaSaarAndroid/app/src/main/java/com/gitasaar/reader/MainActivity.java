@@ -30,6 +30,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.speech.tts.TextToSpeech;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -69,6 +70,8 @@ public final class MainActivity extends Activity {
     private FrameLayout bodyFrame;
     private AdView banner;
     private GitaRepository repository;
+    private TextToSpeech textToSpeech;
+    private boolean speechReady;
     private SharedPreferences prefs;
     private ConnectivityManager networkManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -86,6 +89,13 @@ public final class MainActivity extends Activity {
         prefs=getSharedPreferences(QuoteScheduler.PREFS,MODE_PRIVATE);
         bookmarks=new HashSet<>(prefs.getStringSet("bookmarks",new HashSet<>()));
         repository=new GitaRepository(this);
+        textToSpeech=new TextToSpeech(this,status->{
+            speechReady=status==TextToSpeech.SUCCESS;
+            if(speechReady && textToSpeech!=null) {
+                textToSpeech.setLanguage(new Locale("hi","IN"));
+                textToSpeech.setSpeechRate(0.82f);
+            }
+        });
         networkManager=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         createRoot();
         QuoteScheduler.schedule(this);
@@ -101,6 +111,7 @@ public final class MainActivity extends Activity {
             try{networkManager.unregisterNetworkCallback(networkCallback);}catch(Exception ignored){}
         }
         if(banner!=null)banner.destroy();
+        if(textToSpeech!=null){textToSpeech.stop();textToSpeech.shutdown();}
         super.onDestroy();
     }
     private void createRoot() {
@@ -394,14 +405,57 @@ public final class MainActivity extends Activity {
         s.addView(new KrishnaVisual(this,0),new LinearLayout.LayoutParams(-1,dp(145)));
         s.addView(text("श्रीकृष्ण का संदेश",14,SAFFRON,true),gap(13));
         s.addView(text(selectedVerse.reference(),13,MUTED,false),gap(3));
-        s.addView(text(selectedVerse.sanskrit,22,INK,true),gap(23));
+        int verseFont=prefs.getInt("verse_font_size",22);
+        s.addView(text(selectedVerse.sanskrit,verseFont,INK,true),gap(23));
         View hr=new View(this);hr.setBackgroundColor(BORDER);
         s.addView(hr,gap(20));s.addView(text("आसान हिंदी अर्थ",16,SAFFRON,true),gap(20));
-        s.addView(text("en".equals(prefs.getString("app_language","hi"))?selectedVerse.meaning(true):selectedVerse.meaning(false),17,INK,false),gap(11));
-        s.addView(verseActions(selectedVerse),gap(27));body.addView(s,gap(8));
+        s.addView(text(selectedVerse.meaning(isEnglish()),Math.max(16,verseFont-4),INK,false),gap(11));
+        LinearLayout controls=line();
+        TextView smaller=button("A−",false);
+        TextView listen=button(tr("▶  पाठ सुनें","▶  Listen"),false);
+        TextView bigger=button("A+",false);
+        controls.addView(smaller,new LinearLayout.LayoutParams(0,-2,1));
+        LinearLayout.LayoutParams lpListen=new LinearLayout.LayoutParams(0,-2,2);lpListen.leftMargin=dp(7);lpListen.rightMargin=dp(7);
+        controls.addView(listen,lpListen);controls.addView(bigger,new LinearLayout.LayoutParams(0,-2,1));
+        s.addView(controls,gap(17));
+        smaller.setOnClickListener(v->{prefs.edit().putInt("verse_font_size",Math.max(18,prefs.getInt("verse_font_size",22)-2)).apply();render();});
+        bigger.setOnClickListener(v->{prefs.edit().putInt("verse_font_size",Math.min(32,prefs.getInt("verse_font_size",22)+2)).apply();render();});
+        listen.setOnClickListener(v->{
+            if(textToSpeech!=null&&speechReady)
+                textToSpeech.speak(selectedVerse.sanskrit,TextToSpeech.QUEUE_FLUSH,null,"gita_verse");
+            else toast(tr("फोन में Hindi text-to-speech उपलब्ध नहीं है","Hindi speech engine is unavailable on this phone"));
+        });
+        s.addView(verseActions(selectedVerse),gap(21));
+        LinearLayout navigation=line();
+        TextView previous=button(tr("‹ पिछला","‹ Previous"),false);
+        TextView next=button(tr("अगला ›","Next ›"),true);
+        LinearLayout.LayoutParams prevParams=new LinearLayout.LayoutParams(0,-2,1);prevParams.rightMargin=dp(8);
+        navigation.addView(previous,prevParams);
+        navigation.addView(next,new LinearLayout.LayoutParams(0,-2,1));
+        s.addView(navigation,gap(17));
+        previous.setOnClickListener(v->goToAdjacentVerse(-1));
+        next.setOnClickListener(v->goToAdjacentVerse(1));
+        body.addView(s,gap(8));
         TextView chapter=button("अध्याय "+selectedVerse.chapter+" के बाकी श्लोक",false);
         body.addView(chapter,gap(15));
         chapter.setOnClickListener(v->{selectedChapter=selectedVerse.chapter;current=Screen.CHAPTER;render();});
+    }
+    private void goToAdjacentVerse(int direction){
+        if(selectedVerse==null)return;
+        List<GitaVerse> all=repository.getAll();
+        for(int i=0;i<all.size();i++){
+            if(all.get(i).chapter==selectedVerse.chapter&&all.get(i).number==selectedVerse.number){
+                int dest=i+direction;
+                if(dest<0||dest>=all.size()){
+                    toast(tr("इस तरफ और श्लोक नहीं हैं","There are no more verses in that direction"));
+                    return;
+                }
+                selectedVerse=all.get(dest);
+                selectedChapter=selectedVerse.chapter;
+                render();
+                return;
+            }
+        }
     }
     private LinearLayout verseActions(GitaVerse v){
         LinearLayout row=line();
